@@ -11,7 +11,7 @@ exports.signup = async (req, res) => {
 
     // Validate user input
     if (!(email && password && first_name && last_name)) {
-      res.status(400).send("All input is required");
+      return res.status(400).json({ 'status': 'error', 'message': 'All input is required' });
     }
 
     // check if user already exist
@@ -19,7 +19,7 @@ exports.signup = async (req, res) => {
     const oldUser = await User.findOne({ email });
 
     if (oldUser) {
-      return res.status(409).send("User Already Exist. Please Login");
+      return res.status(409).json({ 'status': 'error', 'message': 'User Already Exist. Please Login' });
     }
 
     //Encrypt user password
@@ -45,9 +45,9 @@ exports.signup = async (req, res) => {
     user.token = token;
 
     // return new user
-    res.status(201).json(user);
+    return res.status(201).json({ 'status': 'success', 'user': user });
   } catch (err) {
-    console.log(err);
+    return res.status(400).json({ 'status': 'error', 'message': err })
   }
   // Our register logic ends here
 };
@@ -62,7 +62,7 @@ exports.signin = async (req, res) => {
 
     // Validate user input
     if (!(email && password)) {
-      res.status(400).send("All input is required");
+      return res.status(400).json({ 'status': 'error', 'message': 'All input is required' });
     }
     // Validate if user exist in our database
     const user = await User.findOne({ email });
@@ -81,11 +81,36 @@ exports.signin = async (req, res) => {
       user.token = token;
 
       // user
-      res.status(200).json(user);
+      return res.status(200).json({ 'status': 'success', 'user': user });
     }
-    res.status(400).send("Invalid Credentials");
+    return res.status(401).send({ 'status': 'error', 'message': 'Invalid Credentials' });
   } catch (err) {
-    console.log(err);
+    return res.status(400).json({ 'status': 'error', 'message': err });
   }
   // Our register logic ends here
 };
+
+exports.logout = async (req, res) => {
+  // Assuming you have retrieved the token from the request
+  const token = req.body.token || req.query.token || req.headers["x-access-token"];
+
+  // Check if token exists
+  if (!token) {
+    return res.status(401).json({ 'status': 'error', 'message': 'Token not provided' });
+  }
+    
+  // Set the expiration time to the current time or a past date
+  const expiredToken = jwt.sign({}, process.env.TOKEN_KEY, { expiresIn: 0 });
+
+  // Return the expired token as a response
+  return res.status(200).json({ 'status': 'success', 'message': 'Logout successful', 'token': expiredToken});
+}
+
+exports.getUser = async (req, res) => {
+  try {
+    const allUser = await User.find({});
+    return res.status(200).json({ 'status': 'success', 'users': allUser });
+  } catch (err) {
+    return res.status(400).json({ 'status': 'error', 'message': err });
+  }
+}
